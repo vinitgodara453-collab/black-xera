@@ -312,7 +312,7 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   supportTelegram: 'https://t.me/SHIVAMH4REEE',
   supportWhatsapp: '+919876543210',
   channelLink: 'https://t.me/BOT_CODE_MEKAR',
-  announcement: '⚡ BLACK XERA: 100% Fresh Non-Drop Telegram Accounts & Instant UPI Recharge Active!',
+  announcement: '🇷🇺 BLACK XERA: रूस (+7) टेलीग्राम अकाउंट निकालने का लाइव पैनल एक्टिव! (Live +7 Extractor & Instant UPI)',
   isStoreOpen: true,
   minRechargeInr: 50
 };

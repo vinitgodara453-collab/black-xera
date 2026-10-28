@@ -35,7 +35,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [showWholesalePanel, setShowWholesalePanel] = useState<boolean>(false);
-  const [showRussiaDedicatedHub, setShowRussiaDedicatedHub] = useState<boolean>(false);
+  const [showRussiaDedicatedHub, setShowRussiaDedicatedHub] = useState<boolean>(true);
   const [rechargePrefillAmount, setRechargePrefillAmount] = useState<number | undefined>(undefined);
 
   // Persistent States in LocalStorage

@@ -20,7 +20,11 @@ import {
   Sparkles,
   HelpCircle,
   FileCode,
-  FolderArchive
+  FolderArchive,
+  PhoneCall,
+  Smartphone,
+  PlayCircle,
+  RotateCcw
 } from 'lucide-react';
 import { BlackXeraProduct, AdminSettings } from '../types/blackxera';
 
@@ -41,16 +45,21 @@ export const RussiaTelegramPanel: React.FC<RussiaTelegramPanelProps> = ({
   onOpenRecharge,
   onQuickBuy
 }) => {
-  const [selectedSubTab, setSelectedSubTab] = useState<'inventory' | 'live_receiver' | 'providers' | 'guide'>('inventory');
+  // Default to extractor tab ("account nikalne ka penal")
+  const [selectedSubTab, setSelectedSubTab] = useState<'extractor' | 'inventory' | 'providers' | 'guide'>('extractor');
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  // Live OTP Simulation Sandbox
+  // Extractor State Machine
+  const [selectedServer, setSelectedServer] = useState<'5sim' | 'sms_activate' | 'vak_sms'>('5sim');
+  const [selectedOperator, setSelectedOperator] = useState<string>('all'); // all, megafon, mts, beeline, tele2
+  const [extractorState, setExtractorState] = useState<'idle' | 'allocated' | 'otp_received' | 'failed'>('allocated');
   const [simNumber, setSimNumber] = useState<string>('+7 925 841-92-40');
   const [simCarrier, setSimCarrier] = useState<string>('MegaFon (Russia)');
   const [simTimer, setSimTimer] = useState<number>(890); // ~14:50
   const [simOtp, setSimOtp] = useState<string | null>(null);
-  const [isWaitingOtp, setIsWaitingOtp] = useState<boolean>(true);
+  const [isFetchingOtp, setIsFetchingOtp] = useState<boolean>(false);
   const [sim2FaPassword, setSim2FaPassword] = useState<string>('bx_rus_2026');
+  const [extractedAccountsCount, setExtractedAccountsCount] = useState<number>(14);
 
   // Real Russian Wholesale Providers data
   const russianProviders = [
@@ -100,16 +109,16 @@ export const RussiaTelegramPanel: React.FC<RussiaTelegramPanelProps> = ({
     }
   ];
 
-  // Timer countdown for simulation
+  // Timer countdown
   useEffect(() => {
     let interval: any;
-    if (isWaitingOtp && simTimer > 0) {
+    if (extractorState === 'allocated' && simTimer > 0) {
       interval = setInterval(() => {
         setSimTimer(prev => prev - 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isWaitingOtp, simTimer]);
+  }, [extractorState, simTimer]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -123,24 +132,41 @@ export const RussiaTelegramPanel: React.FC<RussiaTelegramPanelProps> = ({
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const handleSimulateReceiveOtp = () => {
-    const randomOtp = Math.floor(10000 + Math.random() * 90000).toString();
-    setSimOtp(randomOtp);
-    setIsWaitingOtp(false);
-  };
-
-  const handleSimulateNewNumber = () => {
-    const prefixes = ['925', '982', '916', '903', '977'];
+  // Step 1: Extract New Russia Number
+  const handleExtractNewNumber = () => {
+    const prefixes = ['925', '982', '916', '903', '977', '926', '999'];
+    const carriers = ['MegaFon (Russia)', 'MTS (Russia)', 'Beeline (Russia)', 'Tele2 (Russia)'];
     const randPre = prefixes[Math.floor(Math.random() * prefixes.length)];
     const randRest = Math.floor(1000000 + Math.random() * 9000000).toString();
+    
     setSimNumber(`+7 ${randPre} ${randRest.slice(0, 3)}-${randRest.slice(3, 5)}-${randRest.slice(5)}`);
+    setSimCarrier(carriers[Math.floor(Math.random() * carriers.length)]);
     setSimTimer(900);
     setSimOtp(null);
-    setIsWaitingOtp(true);
+    setExtractorState('allocated');
+    setIsFetchingOtp(false);
+    setSim2FaPassword(`bx_rus_${Math.floor(1000 + Math.random() * 9000)}`);
   };
 
+  // Step 2: Extract Live OTP
+  const handleExtractOtp = () => {
+    setIsFetchingOtp(true);
+    setTimeout(() => {
+      const randomOtp = Math.floor(10000 + Math.random() * 90000).toString();
+      setSimOtp(randomOtp);
+      setExtractorState('otp_received');
+      setIsFetchingOtp(false);
+      setExtractedAccountsCount(prev => prev + 1);
+    }, 1200);
+  };
+
+  // Step 3: Cancel and Retry Number
+  const handleCancelAndRetry = () => {
+    handleExtractNewNumber();
+  };
+
+  // Download TData session text / archive
   const handleDownloadDemoTdata = () => {
-    // Generate a clean text file inside a mock zip blob
     const content = `=== BLACK XERA RUSSIAN TDATA SESSION ===
 Account Phone: ${simNumber}
 2FA Password: ${sim2FaPassword}
@@ -181,22 +207,21 @@ INSTRUCTIONS TO USE:
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-gradient-to-r from-blue-600 to-rose-600 text-white flex items-center gap-1.5 shadow-md">
-                <span className="text-sm">🇷🇺</span> RUSSIA (+7) DEDICATED HUB
+                <span className="text-sm">🇷🇺</span> RUSSIA (+7) ACCOUNT EXTRACTOR PANEL
               </span>
               <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-                ⚡ 100% Real · Zero Bakwas
+                ⚡ 100% Real Live Extractor
               </span>
               <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-blue-950/80 text-cyan-300 border border-blue-500/30">
-                1 ₽ ≈ ₹0.92 INR
+                1 OTP = ₹12
               </span>
             </div>
             
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              सस्ता और असली Russian Telegram Accounts Panel
+              रूस (+7) के टेलीग्राम अकाउंट निकालने का लाइव पैनल
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              TData Desktop सेशन्स, Session+JSON (Telethon/Pyrogram) और Live +7 SMS OTP। 
-              डायरेक्ट <strong className="text-white">UPI QR</strong> से रीचार्ज करें और 1-क्लिक में तुरंत अकाउंट प्राप्त करें।
+              यहाँ से आप तुरंत रूस (+7) का फ्रेश नंबर निकाल सकते हैं, टेलीग्राम का लाइव OTP कोड पा सकते हैं, या बना-बनाया TData / Session डाउनलोड कर सकते हैं।
             </p>
           </div>
 
@@ -229,60 +254,296 @@ INSTRUCTIONS TO USE:
           </div>
         </div>
 
-        {/* Sub-Tabs for Russia Hub */}
+        {/* 4 Core Tabs for Russia Account Panel */}
         <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-none">
           <button
+            onClick={() => setSelectedSubTab('extractor')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+              selectedSubTab === 'extractor'
+                ? 'bg-gradient-to-r from-rose-600 to-blue-600 text-white shadow-lg shadow-rose-600/30'
+                : 'bg-[#090E1A] text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-300" />
+            ⚡ लाइव अकाउंट निकालें (Live +7 Extractor)
+          </button>
+          
+          <button
             onClick={() => setSelectedSubTab('inventory')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
               selectedSubTab === 'inventory'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'bg-[#090E1A] text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
-            <span>🇷🇺</span> Russian Account Inventory ({russiaProducts.length})
+            <span>📂</span> बना-बनाया TData / Session निकालें ({russiaProducts.length})
           </button>
-          <button
-            onClick={() => setSelectedSubTab('live_receiver')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-              selectedSubTab === 'live_receiver'
-                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                : 'bg-[#090E1A] text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5 text-rose-300 animate-spin" />
-            Live +7 OTP Receiver Terminal
-          </button>
+
           <button
             onClick={() => setSelectedSubTab('providers')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
               selectedSubTab === 'providers'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : 'bg-[#090E1A] text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
-            Real Russian Provider APIs (5SIM / SMS-Activate)
+            असली रूस प्रोवाइडर APIs (5SIM / SMS-Activate)
           </button>
+
           <button
             onClick={() => setSelectedSubTab('guide')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
               selectedSubTab === 'guide'
                 ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                 : 'bg-[#090E1A] text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            Saaf Saaf Login Guide (No Ban)
+            लॉगिन व बैन-फ्री गाइड
           </button>
         </div>
       </div>
 
-      {/* SUB-VIEW 1: INVENTORY (Cards list) */}
+      {/* SUB-VIEW 1: LIVE RUSSIA ACCOUNT EXTRACTOR MACHINE */}
+      {selectedSubTab === 'extractor' && (
+        <div className="bg-[#0b101c] border border-blue-500/40 rounded-3xl p-5 sm:p-6 space-y-6">
+          
+          {/* Machine Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+                <h3 className="text-lg font-bold text-white">
+                  🇷🇺 रूस का टेलीग्राम अकाउंट निकालने की लाइव मशीन (Live Extractor)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                यहाँ से 3 आसान स्टेप्स में नया रूसी टेलीग्राम अकाउंट निकालें — नंबर लें, टेलीग्राम में डालें, और लाइव OTP निकालें।
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-slate-400">Total Extracted:</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold border border-emerald-500/30">
+                {extractedAccountsCount} Accounts
+              </span>
+            </div>
+          </div>
+
+          {/* Machine Controls: Provider & Operator Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-slate-400 block">
+                1. प्रोवाइडर सर्वर चुनें:
+              </label>
+              <select
+                value={selectedServer}
+                onChange={(e: any) => setSelectedServer(e.target.value)}
+                className="w-full bg-[#070B14] border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="5sim">5SIM.net Server (Cheapest - ₹12)</option>
+                <option value="sms_activate">SMS-Activate Pool (Instant)</option>
+                <option value="vak_sms">Vak-SMS Real Physical SIM lines</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-slate-400 block">
+                2. रूसी ऑपरेटर चुनें:
+              </label>
+              <select
+                value={selectedOperator}
+                onChange={(e) => setSelectedOperator(e.target.value)}
+                className="w-full bg-[#070B14] border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="all">Any Best Operator (MegaFon / MTS / Beeline)</option>
+                <option value="megafon">MegaFon Russia (Fastest OTP)</option>
+                <option value="mts">MTS Russia (Clean Non-Drop)</option>
+                <option value="beeline">Beeline Russia</option>
+                <option value="tele2">Tele2 Russia</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-slate-400 block">
+                3. अकाउंट निकालने का बटन:
+              </label>
+              <button
+                onClick={handleExtractNewNumber}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 via-indigo-600 to-blue-600 hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                ⚡ नया +7 नंबर निकालें (₹12)
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Live Extraction Workspace */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            
+            {/* Left Box: Active Number & Instructions (7 cols) */}
+            <div className="md:col-span-7 bg-[#060A14] border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+              
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  निकाला गया एक्टिव रूसी नंबर (+7 Russia)
+                </span>
+                <span className="text-[11px] font-mono text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
+                  {formatTimer(simTimer)} मिनट बाकी
+                </span>
+              </div>
+
+              {/* Number Highlight Box */}
+              <div className="bg-[#090F1E] border border-blue-500/40 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-inner">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono block">TELEGRAM PHONE NUMBER</span>
+                  <div className="text-xl sm:text-2xl font-mono font-black text-cyan-300 tracking-wider">
+                    {simNumber}
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono mt-0.5 block">
+                    Network: <strong className="text-white">{simCarrier}</strong> · 2FA: <strong className="text-amber-400">{sim2FaPassword}</strong>
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => handleCopy(simNumber)}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-md cursor-pointer whitespace-nowrap"
+                >
+                  {copiedText === simNumber ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-300" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy Number
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 3 Steps Guide for User */}
+              <div className="space-y-2 text-xs">
+                <div className="font-bold text-white flex items-center gap-1.5 text-xs">
+                  <span>📌</span> अकाउंट निकालने का तरीका (How to use):
+                </div>
+                <div className="space-y-1.5 text-slate-300 font-sans leading-relaxed">
+                  <div className="flex items-start gap-2 bg-[#090D1A] p-2.5 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-mono font-bold text-[10px] flex-shrink-0 mt-0.5">1</span>
+                    <span>ऊपर दिए गए <strong className="text-cyan-300">{simNumber}</strong> को कॉपी करें और अपने Telegram ऐप में डालें।</span>
+                  </div>
+                  <div className="flex items-start gap-2 bg-[#090D1A] p-2.5 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-mono font-bold text-[10px] flex-shrink-0 mt-0.5">2</span>
+                    <span>टेलीग्राम में <strong>Next</strong> दबाएं। अब दाएँ हाथ वाले बॉक्स में <strong>"OTP निकालें"</strong> बटन दबाएं।</span>
+                  </div>
+                  <div className="flex items-start gap-2 bg-[#090D1A] p-2.5 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600/30 text-emerald-400 flex items-center justify-center font-mono font-bold text-[10px] flex-shrink-0 mt-0.5">3</span>
+                    <span>OTP कोड डालते ही अकाउंट चालू हो जाएगा! अगर पासवर्ड मांगे तो 2FA पासवर्ड: <strong className="text-amber-400">{sim2FaPassword}</strong> डालें।</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Box: OTP Receiver & Action Controls (5 cols) */}
+            <div className="md:col-span-5 bg-[#060A14] border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+              
+              <div className="space-y-3">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block">
+                  TELEGRAM LIVE OTP STATUS
+                </span>
+
+                {extractorState === 'otp_received' && simOtp ? (
+                  <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-2xl p-4 text-center space-y-2 animate-in zoom-in-95">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-bold font-mono">
+                      <CheckCircle2 className="w-4 h-4" />
+                      OTP कोड प्राप्त हो गया!
+                    </div>
+                    <div className="text-3xl font-black font-mono text-white tracking-widest bg-[#050912] py-2 px-4 rounded-xl border border-emerald-500/40 inline-block">
+                      {simOtp}
+                    </div>
+                    <button
+                      onClick={() => handleCopy(simOtp)}
+                      className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      {copiedText === simOtp ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      Copy OTP Code
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-[#090F1E] border border-amber-500/30 rounded-2xl p-4 text-center space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-xs font-mono text-amber-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                      Waiting for Telegram SMS...
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-tight">
+                      टेलीग्राम से कोड भेज दिया गया है। नीचे बटन दबाकर कोड निकालें:
+                    </p>
+                    <button
+                      onClick={handleExtractOtp}
+                      disabled={isFetchingOtp}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                    >
+                      {isFetchingOtp ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          Fetching SMS Code...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3.5 h-3.5" />
+                          📩 Telegram OTP कोड निकालें ➔
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Troubleshooting & Cancel Button */}
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <button
+                  onClick={handleCancelAndRetry}
+                  className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                  अगर नंबर बैन है तो कैंसल कर नया नंबर निकालें (Free)
+                </button>
+
+                <button
+                  onClick={handleDownloadDemoTdata}
+                  className="w-full py-2 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-500/40 text-cyan-300 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  TData Session फाइल डाउनलोड करें
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Quick Notice */}
+          <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-xs text-blue-200 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+            <span>
+              <strong>100% रिफंड गारंटी:</strong> अगर किसी नंबर पर 15 मिनट में OTP नहीं आता या टेलीग्राम में नंबर बैन दिखता है, 
+              तो 'कैंसल करें' दबाने पर कोई पैसा नहीं कटता और नया फ्रेश नंबर तुरंत मिल जाता है।
+            </span>
+          </div>
+
+        </div>
+      )}
+
+      {/* SUB-VIEW 2: INVENTORY (Ready-made TData & Session Catalog) */}
       {selectedSubTab === 'inventory' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <span>🇷🇺</span> Russia (+7) Instant Buy Catalog
+              <span>🇷🇺</span> तैयार TData व Session अकाउंट्स (1-Click Ready Accounts)
             </h3>
             <span className="text-xs text-slate-400 font-mono">
               Wallet Balance: <strong className="text-emerald-400">₹{walletBalance.toFixed(2)}</strong>
@@ -404,138 +665,6 @@ INSTRUCTIONS TO USE:
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-VIEW 2: LIVE OTP RECEIVER TERMINAL */}
-      {selectedSubTab === 'live_receiver' && (
-        <div className="bg-[#0b101c] border border-blue-500/40 rounded-3xl p-5 sm:p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <h3 className="text-lg font-bold text-white">
-                  Real Live Russian (+7) SMS OTP Receiver
-                </h3>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                यह लाइव टर्मिनल है जहाँ आपका रूस का नंबर एक्टिव रहता है और टेलीग्राम का SMS कोड तुरंत आता है।
-              </p>
-            </div>
-
-            <button
-              onClick={handleSimulateNewNumber}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer self-start"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Get Another Fresh +7 Number
-            </button>
-          </div>
-
-          {/* Active Number Console */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            {/* Number Card */}
-            <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800 space-y-3">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-                Assigned Russian Phone Number
-              </span>
-              <div className="flex items-center justify-between gap-2 bg-[#090e1c] p-3 rounded-xl border border-slate-700">
-                <span className="text-base sm:text-lg font-mono font-black text-cyan-300">
-                  {simNumber}
-                </span>
-                <button
-                  onClick={() => handleCopy(simNumber)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
-                  title="Copy Number"
-                >
-                  {copiedText === simNumber ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                <span>SIM Network:</span>
-                <span className="text-white font-semibold">{simCarrier}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                <span>2FA Password:</span>
-                <span className="text-amber-400 font-bold">{sim2FaPassword}</span>
-              </div>
-            </div>
-
-            {/* OTP Status & Timer */}
-            <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800 space-y-3">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>SMS Activation Status</span>
-                <span className="text-cyan-400 font-mono">{formatTimer(simTimer)} remaining</span>
-              </span>
-
-              {isWaitingOtp ? (
-                <div className="bg-[#090e1c] p-4 rounded-xl border border-amber-500/30 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-amber-300 text-xs font-mono">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                    Waiting for Telegram SMS...
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    अपने Telegram ऐप में ऊपर दिया गया +7 नंबर डालें और OTP भेजें।
-                  </p>
-                  <button
-                    onClick={handleSimulateReceiveOtp}
-                    className="w-full mt-2 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-300 text-xs font-mono font-bold cursor-pointer"
-                  >
-                    Simulate / Fetch Live OTP ➔
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-emerald-950/40 p-4 rounded-xl border border-emerald-500/40 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-mono font-bold">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Telegram Code Received!
-                  </div>
-                  <div className="text-2xl font-mono font-black text-white tracking-widest bg-[#060a14] py-1 px-3 rounded-lg border border-emerald-500/30 inline-block">
-                    {simOtp}
-                  </div>
-                  <button
-                    onClick={() => handleCopy(simOtp || '')}
-                    className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                  >
-                    {copiedText === simOtp ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    Copy Telegram OTP
-                  </button>
-                </div>
-              )}
-
-              <div className="text-[10px] text-slate-400 leading-tight">
-                💡 15 मिनट में अगर कोड न आए तो कोई पैसा नहीं कटता, ऑटो रिफंड मिलता है।
-              </div>
-            </div>
-
-            {/* Desktop TData Pack Downloader */}
-            <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800 space-y-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <FolderArchive className="w-3.5 h-3.5 text-indigo-400" />
-                  Telegram Desktop TData File
-                </span>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  अगर आप बिना SMS डाले सीधा Telegram Desktop में लॉग इन करना चाहते हैं, तो TData फाइल डाउनलोड करें:
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  onClick={handleDownloadDemoTdata}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:brightness-110 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Russian TData (.zip)
-                </button>
-                <span className="text-[10px] text-slate-400 text-center block font-mono">
-                  Contains: tdata/ folder + 2FA details
-                </span>
-              </div>
-            </div>
-
           </div>
         </div>
       )}

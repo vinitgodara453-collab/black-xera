@@ -1,0 +1,6 @@
+telebot>=4.26.0
+pyTelegramBotAPI>=4.26.0
+requests>=2.32.0
+qrcode>=7.4.2
+pillow>=10.4.0
+python-dotenv>=1.0.1

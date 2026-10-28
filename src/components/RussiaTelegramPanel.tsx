@@ -97,6 +97,28 @@ export const RussiaTelegramPanel: React.FC<RussiaTelegramPanelProps> = ({
       sampleEndpoint: 'GET https://vak-sms.ru/api/getNumber/?service=tg&country=ru'
     },
     {
+      name: 'LZT.market (Lolzteam Telegram Accounts)',
+      badge: 'TOP #1 TDATA & SESSION MARKET',
+      priceRub: '15 ₽ - 25 ₽',
+      priceInr: '₹14 - ₹23',
+      stockStatus: '100,000+ Ready TData & Sessions',
+      url: 'https://lzt.market/telegram/',
+      desc: 'दुनिया की सबसे बड़ी रूसी मार्केटप्लेस जहाँ बने-बनाए रूस (+7) के टेलीग्राम TData और .session फाइल्स ₹15-₹20 में 1-क्लिक में मिलते हैं।',
+      apiDoc: 'https://lzt.market/api/',
+      sampleEndpoint: 'GET https://api.lzt.market/telegram?country=ru'
+    },
+    {
+      name: 'Darkstore.biz (TG Wholesale)',
+      badge: 'AUTO-REG & AGED ACCOUNTS',
+      priceRub: '16 ₽ - 30 ₽',
+      priceInr: '₹15 - ₹28',
+      stockStatus: '50,000+ Ready Stock',
+      url: 'https://darkstore.biz/catalog/telegram',
+      desc: 'ऑटो-रजिस्टर्ड रूसी टेलीग्राम अकाउंट्स, वार्म-अप TData, और बॉट्स के लिए तैयार सेशन फाइल्स।',
+      apiDoc: 'https://darkstore.biz/api',
+      sampleEndpoint: 'GET https://darkstore.biz/api/v1/goods'
+    },
+    {
       name: 'Grizzly SMS',
       badge: 'INSTANT DELIVERY',
       priceRub: '13 ₽ - 19 ₽',

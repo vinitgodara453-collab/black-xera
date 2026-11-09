@@ -1,0 +1,6 @@
+{
+  "name": "CloudVPS Finder & Cheap VPS Guide",
+  "description": "Find the cheapest Ubuntu VPS alternatives to AWS EC2, compare prices in INR/USD, check IP 54.252.142.201, and follow step-by-step setup guides.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

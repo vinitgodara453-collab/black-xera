@@ -1119,15 +1119,42 @@ def admin_cut_balance(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error: {e}")
 
-# ----------------- MESSAGE HANDLER FOR INPUTS (UTR, BROADCAST) -----------------
+# ----------------- MESSAGE HANDLER FOR INPUTS (UTR, BROADCAST, EMOJIS) -----------------
+
+@bot.message_handler(content_types=['sticker'])
+def handle_sticker_emoji(message):
+    if message.sticker and getattr(message.sticker, 'custom_emoji_id', None):
+        emoji_id = message.sticker.custom_emoji_id
+        bot.reply_to(
+            message,
+            f"✨ <b>PREMIUM EMOJI ID DETECTED!</b>\n\n"
+            f"🔢 <b>Emoji ID:</b> <code>{emoji_id}</code>\n\n"
+            f"📝 <b>HTML Code (ise bot ke text me paste karein):</b>\n"
+            f"<code>&lt;tg-emoji emoji-id=\"{emoji_id}\"&gt;⭐&lt;/tg-emoji&gt;</code>"
+        )
 
 @bot.message_handler(func=lambda msg: True)
 def handle_text_inputs(message):
     user_id = message.from_user.id
     state = USER_STATES.get(user_id)
     
+    # Check if user sent a Telegram Premium animated emoji
+    if message.entities:
+        for entity in message.entities:
+            if entity.type == 'custom_emoji' and getattr(entity, 'custom_emoji_id', None):
+                emoji_id = entity.custom_emoji_id
+                bot.reply_to(
+                    message,
+                    f"✨ <b>PREMIUM EMOJI ID DETECTED!</b>\n\n"
+                    f"🔢 <b>Emoji ID:</b> <code>{emoji_id}</code>\n\n"
+                    f"📝 <b>HTML Code (ise bot ke text me paste karein):</b>\n"
+                    f"<code>&lt;tg-emoji emoji-id=\"{emoji_id}\"&gt;⭐&lt;/tg-emoji&gt;</code>"
+                )
+                return
+
     # 1. Waiting for UTR
     if state and state.get("action") == "waiting_for_utr":
+
         utr_text = message.text.strip().replace(" ", "")
         if len(utr_text) < 6:
             bot.send_message(message.chat.id, "❌ Please enter a valid 12-digit UTR / Reference ID.")

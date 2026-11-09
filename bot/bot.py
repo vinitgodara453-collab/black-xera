@@ -38,12 +38,64 @@ except ImportError:
     HAS_QR = False
 
 # ----------------- CONFIGURATION & ENVIRONMENT -----------------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "7945621834:AAFtExampleTokenReplaceMe")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "789654321"))
-OWNER_UPI = os.getenv("OWNER_UPI", "vinit-godara@fam")
-OWNER_NAME = os.getenv("OWNER_NAME", "VINIT GODARA")
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+
+def load_or_prompt_config():
+    cfg = {}
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            cfg = {}
+
+    token = os.getenv("BOT_TOKEN") or cfg.get("BOT_TOKEN", "")
+    admin_id = os.getenv("ADMIN_ID") or cfg.get("ADMIN_ID", "")
+    owner_upi = os.getenv("OWNER_UPI") or cfg.get("OWNER_UPI", "vinit-godara@fam")
+    owner_name = os.getenv("OWNER_NAME") or cfg.get("OWNER_NAME", "VINIT GODARA")
+
+    # If dummy or empty, ask user in terminal
+    if not token or "ExampleToken" in token or len(token) < 25:
+        print("\n" + "="*56)
+        print("🔑 TELEGRAM BOT TOKEN REQUIRED")
+        print("="*56)
+        print("Telegram par @BotFather se jo token mila hai, use yahan paste karein:")
+        try:
+            token = input("👉 Enter BOT_TOKEN: ").strip()
+        except EOFError:
+            token = ""
+        cfg["BOT_TOKEN"] = token
+
+    if not admin_id or str(admin_id) in ["789654321", ""]:
+        print("\n👉 Apna numeric Telegram ID dalein (e.g. 123456789):")
+        try:
+            admin_id_input = input("👉 Enter ADMIN_ID: ").strip()
+            admin_id = int(admin_id_input) if admin_id_input else 789654321
+        except Exception:
+            admin_id = 789654321
+        cfg["ADMIN_ID"] = admin_id
+    else:
+        try:
+            admin_id = int(admin_id)
+        except Exception:
+            admin_id = 789654321
+
+    cfg["BOT_TOKEN"] = token
+    cfg["ADMIN_ID"] = admin_id
+    cfg["OWNER_UPI"] = owner_upi
+    cfg["OWNER_NAME"] = owner_name
+
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
+
+    return token, admin_id, owner_upi, owner_name
+
+BOT_TOKEN, ADMIN_ID, OWNER_UPI, OWNER_NAME = load_or_prompt_config()
 BOT_USERNAME = os.getenv("BOT_USERNAME", "Cheap_Api_Pro_Bot")
-CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "")  # e.g. "@BlackXeraOfficial"
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "@vinitgodara453")
 
 # External 5SIM / SMS-Activate API Keys (Optional - Fallback simulator included)
@@ -58,6 +110,7 @@ logging.basicConfig(
 logger = logging.getLogger("CheapApiBot")
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
+
 
 # ----------------- LOCAL PERSISTENT DATABASE -----------------
 DB_FILE = os.path.join(os.path.dirname(__file__), "cheap_api_db.json")
@@ -1176,8 +1229,32 @@ def run_http_server(port=8080):
 # ----------------- MAIN EXECUTION -----------------
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting Cheap API Bot Pro...")
-    
+    print("\n" + "="*56)
+    print("🚀 INITIALIZING CHEAP API BOT PRO...")
+    print("="*56)
+
+    # Test Telegram Token validity immediately
+    try:
+        me = bot.get_me()
+        print(f"✅ CONNECTION SUCCESSFUL!")
+        print(f"🤖 Bot Name: {me.first_name}")
+        print(f"🔗 Bot Username: @{me.username}")
+        print(f"👑 Admin ID: {ADMIN_ID}")
+        print(f"💰 UPI ID: {OWNER_UPI}")
+        print("="*56)
+        print("⚡ Bot is now LIVE and listening for commands 24/7!")
+        print("👉 Go to Telegram and send /start to test your bot.")
+        print("="*56 + "\n")
+    except Exception as e:
+        print(f"\n❌ ERROR: Telegram se connect nahi ho paya!")
+        print(f"Reason: {e}")
+        print("\n💡 SOLVE KAISE KAREIN:")
+        print("1. Telegram par @BotFather kholiye.")
+        print("2. Apna bot token copy karein (Example: 7945621834:AAFt...).")
+        print("3. Termux me `python bot.py` run karke sahi token dalein.")
+        print("="*56 + "\n")
+        sys.exit(1)
+
     # Start Keep-Alive Web Server in Background Thread
     PORT = int(os.getenv("PORT", 8080))
     http_thread = threading.Thread(target=run_http_server, args=(PORT,), daemon=True)
@@ -1190,3 +1267,4 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Telegram polling exception: {e}")
             time.sleep(5)
+
